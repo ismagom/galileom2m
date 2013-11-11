@@ -3,6 +3,8 @@ This is a fork of liblwm2m by David Navarro (https://github.com/01org/liblwm2m).
 Galileom2m
 ----------
 
+galileom2m uses the LWM2M protocol to provide OTA and device management for the Intel Galileo Board.
+
 Summary of changes:
  * Fixed some warnings in the original core/ code. 
  * Defined an object API for easy setup of objects and its resources. 
