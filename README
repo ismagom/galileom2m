@@ -4,6 +4,7 @@ Galileom2m
 ----------
 
 Summary of changes:
+ * Fixed some warnings in the original core/ code. 
  * Defined an object API for easy setup of objects and its resources. 
  * Added applications object, aimed at providing OTA software reconfiguration. 
  * Added a timer that runs functions to update the status of objects. 
