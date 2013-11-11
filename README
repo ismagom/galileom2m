@@ -1,5 +1,19 @@
-liblwm2m is an implementation of the LWM2M protocol from the Open Mobile Alliance.
+This is a fork of liblwm2m by David Navarro (https://github.com/01org/liblwm2m). 
 
+Galileom2m
+----------
+
+Summary of changes:
+ * Defined an object API for easy setup of objects and its resources. 
+ * Added applications object, aimed at providing OTA software reconfiguration. 
+ * Added a timer that runs functions to update the status of objects. 
+ * Future plans: Obtain battery/solar panel voltage from Intel Galileo board. 
+
+
+liblwm2m
+=========
+
+liblwm2m is an implementation of the LWM2M protocol from the Open Mobile Alliance.
 
 Source Layout
 -------------
