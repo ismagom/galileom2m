@@ -34,7 +34,7 @@ David Navarro <david.navarro@intel.com>
 #include <stdlib.h>
 #include <string.h>
 #include <netdb.h>
-
+#include <unistd.h>
 #include <stdio.h>
 
 
@@ -160,6 +160,7 @@ int lwm2m_set_bootstrap_server(lwm2m_context_t * contextP,
         free(contextP->bootstrapServer);
     }
     contextP->bootstrapServer = serverP;
+    return 0;
 }
 
 int lwm2m_add_server(lwm2m_context_t * contextP,

@@ -201,7 +201,7 @@ int transaction_send(lwm2m_context_t * contextP,
         break;
 
     default:
-        return;
+        return -1;
     }
 
     if (transacP->retrans_counter == 0)

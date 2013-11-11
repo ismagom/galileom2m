@@ -186,8 +186,8 @@ int lwm2m_handle_packet(lwm2m_context_t * contextP,
     coap_status_t coap_error_code = NO_ERROR;
     static coap_packet_t message[1];
     static coap_packet_t response[1];
-    uint8_t pktBuffer[COAP_MAX_PACKET_SIZE+1];
-    size_t pktBufferLen = 0;
+    //uint8_t pktBuffer[COAP_MAX_PACKET_SIZE+1];
+    //size_t pktBufferLen = 0;
 
     coap_error_code = coap_parse_message(message, buffer, (uint16_t)length);
     if (coap_error_code==NO_ERROR)
@@ -318,7 +318,7 @@ int lwm2m_handle_packet(lwm2m_context_t * contextP,
 
     if (coap_error_code != NO_ERROR)
     {
-        LOG("ERROR %u: %s\n", coap_error_code, coap_error_message);
+        LOG("ERROR %u: %s COAP: %d\n", coap_error_code, coap_error_message, message->code);
 
         /* Set to sendable error code. */
         if (coap_error_code >= 192)
@@ -330,6 +330,7 @@ int lwm2m_handle_packet(lwm2m_context_t * contextP,
         coap_set_payload(message, coap_error_message, strlen(coap_error_message));
         message_send(contextP, message, fromAddr, fromAddrLen);
     }
+    return 0;
 }
 
 

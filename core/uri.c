@@ -31,7 +31,7 @@ David Navarro <david.navarro@intel.com>
 #include "internals.h"
 #include <stdlib.h>
 #include <string.h>
-
+#include <ctype.h>
 
 static int prv_parse_number(const char * uriString,
                             size_t uriLength,
@@ -39,7 +39,6 @@ static int prv_parse_number(const char * uriString,
 {
     int result = 0;
     int mul = 0;
-    int i = 0;
 
     while (*headP < uriLength && uriString[*headP] != '/')
     {
