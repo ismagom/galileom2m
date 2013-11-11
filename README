@@ -10,6 +10,8 @@ Summary of changes:
  * Added a timer that runs functions to update the status of objects. 
  * Future plans: Obtain battery/solar panel voltage from Intel Galileo board. 
 
+Follow the instructions below for compiling and usage. 
+
 
 liblwm2m
 =========
@@ -71,21 +73,9 @@ In the any directory, run the following commands:
     make
     ./lwm2mclient
 
-The lwm2mclient features two LWM2M objects:
-    - Device Object (id: 3) containing hard-coded values from the Example LWM2M Client of
-    Appendix E of the LWM2M Technical Specification.
-    - a test object (id: 1024) with the following description:
-                           Multiple
-          Object |  ID  | Instances | Mandatoty |
-           Test  | 1024 |    Yes    |    No     |
-         
-           Ressources:
-                       Supported    Multiple
-           Name | ID | Operations | Instances | Mandatory |  Type   | Range | Units | Description |
-           test |  1 |    R/W     |    No     |    Yes    | Integer | 0-255 |       |             |
-           exec |  2 |     E      |    No     |    Yes    |         |       |       |             |
-    
+
 The lwm2mclient opens udp port 5683. You can connect to it by installing the firefox plugin Copper
 (http://people.inf.ethz.ch/mkovatsc/copper.php) and opening a new Firefox tab to: coap://[::1]:5683
 At launch, lwm2mclient tries to register to a LWM2M Server at [::1]:5684. It features a basic command
 line interface. Type 'help' for a list of supported commands.
+
