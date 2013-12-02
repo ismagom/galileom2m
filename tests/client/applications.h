@@ -1,4 +1,9 @@
 
+/*
+ * Copyright (c) 2013, Ismael Gomez - gomezi@tcd.ie
+ *
+ */
+
 #define IDLE		0
 #define DOWNLOADING	1
 #define DOWNLOADED	2

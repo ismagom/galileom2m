@@ -1,4 +1,8 @@
 
+/*
+ * Copyright (c) 2013, Ismael Gomez - gomezi@tcd.ie
+ *
+ */
 
 
 #define NOF_POWER_SOURCES	3

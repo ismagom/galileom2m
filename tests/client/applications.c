@@ -27,7 +27,7 @@ int exec_kill(int instanceId);
 
 applications_t applicationsDB[NOF_APPLICATIONS];
 
-#define APPLICATIONS_NOF_RESOURCEID		8
+#define APPLICATIONS_NOF_RESOURCEID		9
 
 typedef struct {
 	applications_t *appObject;
@@ -48,21 +48,21 @@ objectConfig_t* newObjectApplications() {
 		objectAddResourceReadWrite(config, "URL", 2, STRING);
 		objectResourceStringSize(config, 2, 64);
 		objectAddResourceExec(config, "Download", 3, exec_download);
-		objectAddResourceExec(config, "Run", 4, exec_run);
-		objectAddResourceExec(config, "Kill", 5, exec_kill);
-		objectAddResourceRead(config, "State", 6, INT);
-		objectAddResourceRead(config, "Error Code", 7, INT);
-		objectAddResourceReadWrite(config, "Args", 8, STRING);
-		objectResourceStringSize(config, 8, 64);
+		objectAddResourceReadWrite(config, "Args", 4, STRING);
+		objectResourceStringSize(config, 4, 64);
+		objectAddResourceExec(config, "Run", 5, exec_run);
+		objectAddResourceExec(config, "Kill", 6, exec_kill);
+		objectAddResourceRead(config, "State", 7, INT);
+		objectAddResourceRead(config, "Error Code", 8, INT);
 
 		// we create now all the object instances, since CREATE command is not supported yet
 		for (j=0;j<NOF_APPLICATIONS;j++) {
 			objectSetStringValueInstance(config, 0, j, applicationsDB[j].name);
 			objectSetStringValueInstance(config, 1, j, applicationsDB[j].version);
 			objectSetStringValueInstance(config, 2, j, applicationsDB[j].URL);
-			objectSetIntValueInstance(config, 6, j, &applicationsDB[j].state);
-			objectSetIntValueInstance(config, 7, j, &applicationsDB[j].error);
-			objectSetStringValueInstance(config, 8, j, applicationsDB[j].args);
+			objectSetStringValueInstance(config, 4, j, applicationsDB[j].args);
+			objectSetIntValueInstance(config, 7, j, &applicationsDB[j].state);
+			objectSetIntValueInstance(config, 8, j, &applicationsDB[j].error);
 		}
 	}
 	return config;
@@ -75,6 +75,9 @@ void *download_thread(void *arg) {
 	obj->appObject->error = ret;
 	if (ret) {
 		obj->appObject->state = ERROR;
+		if (ret == 1) {
+			obj->appObject->error = INVALID_URL;
+		}
 	} else {
 		obj->appObject->state = DOWNLOADED;
 		/* make executable */
@@ -154,7 +157,7 @@ int exec_download(int instanceId) {
 		}
 		cmdlen = strlen(host)+strlen(file)+64;
 		cmd = malloc(cmdlen);
-		snprintf(cmd, cmdlen, "tftp %s -m binary -c get %s", host, file);
+		snprintf(cmd, cmdlen, "tftp -g -r %s %s", file, host);
 		applicationsDB[instanceId].state = DOWNLOADING;
 		applicationsDB[instanceId].error = 0;
 		free(host);
@@ -177,23 +180,25 @@ int exec_run(int instanceId) {
 	cmdLen = 2*(strlen(path) + strlen(applicationsDB[instanceId].name)) + 512;
 	cmd = malloc(cmdLen);
 	if (cmd != NULL) {
-		snprintf(cmd, cmdLen, "start-stop-daemon --start --pidfile %s/%s.pid --startas %s/%s %s--background -m",
+		snprintf(cmd, cmdLen, "start-stop-daemon --start --pidfile %s/%s.pid --startas %s/%s %s --background -m",
 				path, applicationsDB[instanceId].name, path, applicationsDB[instanceId].name,
 				applicationsDB[instanceId].args);
+		printf("running cmd: %s\n", cmd);
 		ret = system(cmd);
 		free(cmd);
 		free(path);
+
 		if (ret == 0) {
 			applicationsDB[instanceId].state = RUNNING;
 		} else {
 			applicationsDB[instanceId].state = ERROR;
 			applicationsDB[instanceId].error = ERROR_RUNNING;
 		}
+		printf("ret=%d\n", ret);
 		return ret;
 	} else {
 		return -1;
 	}
-	return 0;
 }
 
 int exec_kill(int instanceId) {

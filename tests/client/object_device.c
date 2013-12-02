@@ -27,7 +27,6 @@ int exec_reboot(int instanceId);
 int exec_reset(int instanceId);
 int exec_reset_error(int instanceId);
 
-static int battery_cnt=0;
 
 /* default values for device state parameters */
 device_state_t device_state = {
@@ -51,6 +50,7 @@ objectConfig_t* newObjectDevice() {
 		objectAddResourceRead(config, "Available Power Sources", 6, INT);
 		objectAddResourceRead(config, "Power Source Voltage", 7, INT);
 		objectAddResourceRead(config, "Power Source Current", 8, INT);
+
 		for (i=0;i<NOF_POWER_SOURCES;i++) {
 			objectSetIntValueInstanceMultiple(config, 6, 0, i, &device_state.power_sources[i]);
 			objectSetIntValueInstanceMultiple(config, 7, 0, i, &device_state.ps_voltage[i]);
@@ -90,23 +90,89 @@ long long free_memory() {
 	return ps * pn;
 }
 
+#define GPIO_MAP_MAX 	2
+char* gpio_map[GPIO_MAP_MAX] = {"37", "36"};
+
+int sysfs_write(char *str, char *file) {
+	FILE *f;
+	int ret = -1;
+	f = fopen(file, "w");
+	if (f != NULL) {
+		if (-1 != fwrite(str, strlen(str), 1, f)) {
+			ret = 0;
+		} else {
+			perror("fwrite");
+		}
+	} else {
+		perror("fopen");
+	}
+	fclose(f);
+	return ret;
+}
+
+int sysfs_read(char *file) {
+	FILE *f;
+	int ret = -1;
+	f = fopen(file, "r");
+	if (f != NULL) {
+		char tmp[64];
+		if (-1 != fread(tmp, 64, 1, f)) {
+			ret = atoi(tmp);
+		} else {
+			perror("fread");
+		}
+	} else {
+		perror("fopen");
+	}
+	fclose(f);
+	return ret;
+}
+
+int ad_init(int idx) {
+	if (idx >=0 && idx < GPIO_MAP_MAX) {
+		char tmp[256];
+		sysfs_write(gpio_map[idx], "/sys/class/gpio/export");
+		snprintf(tmp, 256, "/sys/class/gpio/gpio%s/direction",gpio_map[idx]);
+		sysfs_write("out", tmp);
+		snprintf(tmp, 256, "/sys/class/gpio/gpio%s/value",gpio_map[idx]);
+		sysfs_write("0", tmp);
+		return 0;
+	} else {
+		return -1;
+	}
+}
+
+uint64_t ad_read(int idx) {
+	char tmp[256];
+	snprintf(tmp, 256, "/sys/bus/iio/devices/iio:device0/in_voltage%d_raw",idx);
+	return (uint64_t) sysfs_read(tmp);
+}
+
+static int first_time = 0;
 
 /* This function is called periodically by status_run(). It updates the device_state_t
  * data, which is accessed by the READ command in object device
  */
 void device_state_update() {
 	struct timeval now;
-	int i;
+
+	if (!first_time) {
+		first_time = 1;
+		ad_init(0);
+		ad_init(1);
+	}
 
 	gettimeofday(&now, NULL);
 	device_state.cur_time = now.tv_sec;
-	for (i=0;i<3;i++) {
-		device_state.ps_current[i] = (i+1)*battery_cnt++;
-		device_state.ps_voltage[i] = 2*(i+1)*battery_cnt++;
-	}
-	if (battery_cnt == 100) {
-		battery_cnt = 0;
-	}
+	device_state.ps_voltage[0] = 5000;
+	device_state.ps_current[0] = 500;
+
+	device_state.ps_current[1] = 500;
+	device_state.ps_voltage[1] = ad_read(0);
+
+	device_state.ps_current[2] = 500;
+	device_state.ps_voltage[2] = ad_read(1);
+
 	device_state.error_code = 0;
 	device_state.memory_free = free_memory();
 	device_state.state_code = 0;

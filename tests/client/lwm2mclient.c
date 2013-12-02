@@ -28,8 +28,7 @@
 
  */
 
-/*
- * Copyright (c) 2013, Ismael Gomez - gomezi@tcd.ie
+/* Modifications by Ismael Gomez - gomezi@tcd.ie
  *
  */
 
@@ -102,6 +101,64 @@ static void prv_output_buffer(uint8_t * buffer, int length) {
 
 		i += 16;
 	}
+}
+
+int get_remote_socket(char *ip, int port) {
+	struct sockaddr_in6 addr;
+	int s = -1;
+
+	bzero(&addr,sizeof(addr));
+	addr.sin6_family = AF_INET6;
+	addr.sin6_port=htons(port);
+	if (inet_pton(AF_INET6, ip, &(addr.sin6_addr)) != 1) {
+		perror("inet_pton");
+		return -1;
+	}
+
+	printf("Connecting to %s:%d\n", ip, port);
+
+	s = socket(PF_INET6, SOCK_DGRAM, 0);
+	if (s >= 0) {
+		if (connect(s, (struct sockaddr*) &addr, (socklen_t) sizeof(struct sockaddr_in6))) {
+			close(s);
+			s = -1;
+			perror("connect");
+		}
+	} else {
+		perror("socket");
+	}
+	return s;
+}
+
+
+int get_remote_socket_ip4(char *ip, int port) {
+	struct sockaddr_in addr;
+	int s = -1;
+
+	bzero(&addr,sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr=inet_addr(ip);
+	addr.sin_port=htons(port);
+
+	printf("Connecting to %s:%d\n", ip, port);
+
+	s = socket(PF_INET, SOCK_DGRAM, 0);
+	if (s >= 0) {
+		if (connect(s, (struct sockaddr*) &addr, (socklen_t) sizeof(addr))) {
+			close(s);
+			s = -1;
+			perror("connect");
+		}
+	} else {
+		perror("socket");
+	}
+	if (s>=0) {
+		if (-1 == write(s, &addr, sizeof(addr))) {
+			perror("send");
+		}
+	}
+	printf("open socket %d\n", s);
+	return s;
 }
 
 int get_socket() {
@@ -199,7 +256,7 @@ static void prv_change(char * buffer, void * user_data) {
 }
 
 void usage(char *arg) {
-	fprintf(stderr, "Usage: %s endpointName\n", arg);
+	fprintf(stderr, "Usage: %s endpointName server_addr\n", arg);
 }
 
 int main(int argc, char *argv[]) {
@@ -223,14 +280,14 @@ int main(int argc, char *argv[]) {
 
 	COMMAND_END_LIST };
 
-	if (argc < 2) {
+	if (argc < 3) {
 		usage(argv[0]);
 		return -1;
 	}
 
 	endpointName = argv[1];
 
-	socket = get_socket();
+	socket = get_remote_socket(argv[2], 5684);
 	if (socket < 0) {
 		fprintf(stderr, "Failed to open socket: %d\r\n", errno);
 		return -1;
@@ -263,7 +320,7 @@ int main(int argc, char *argv[]) {
 	signal(SIGINT, handle_sigint);
 
 	memset(&security, 0, sizeof(lwm2m_security_t));
-	result = lwm2m_add_server(lwm2mH, 123, "::1", 5684, &security);
+	result = lwm2m_add_server(lwm2mH, 123, argv[2], 5684, &security);
 	if (result != 0) {
 		fprintf(stderr, "lwm2m_add_server() failed: 0x%X\r\n", result);
 		return -1;

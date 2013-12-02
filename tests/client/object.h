@@ -1,4 +1,9 @@
 
+/*
+ * Copyright (c) 2013, Ismael Gomez - gomezi@tcd.ie
+ *
+ */
+
 #define MAX_OBJ_INSTANCES 	10
 #define MAX_DATA_VALUES 	10
 

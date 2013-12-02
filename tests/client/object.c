@@ -1,4 +1,9 @@
 
+/*
+ * Copyright (c) 2013, Ismael Gomez - gomezi@tcd.ie
+ *
+ */
+
 #include "core/liblwm2m.h"
 #include "object.h"
 
@@ -147,11 +152,14 @@ static uint8_t prv_object_read(lwm2m_uri_t * uriP, char ** bufferP,
 
 	resourceDB_t* resource = findId(GET_OBJCONFIG(objectP), uriP->resourceId);
 	if (!resource) {
+		printf("Resource %u/%u/%u not found\n", uriP->objectId,uriP->instanceId, uriP->resourceId);
 		return COAP_404_NOT_FOUND;
 	}
 	if (!LWM2M_URI_IS_SET_INSTANCE(uriP)) {
 		uriP->instanceId = 0;
 	}
+
+	fprintf(stdout, "\n\t Received READ for object %u resource %s\n", uriP->objectId, resource->desc);
 
 	// is the server asking for the full object ?
 	if (!LWM2M_URI_IS_SET_RESOURCE(uriP)) {
@@ -167,7 +175,6 @@ static uint8_t prv_object_read(lwm2m_uri_t * uriP, char ** bufferP,
 		return COAP_405_METHOD_NOT_ALLOWED ;
 	}
 
-	fprintf(stdout, "\n\t Received READ for object %u resource %s\n", uriP->objectId, resource->desc);
 
 	/* Resource is a string */
 	if (resource->type == STRING) {
@@ -202,9 +209,10 @@ static uint8_t prv_object_read(lwm2m_uri_t * uriP, char ** bufferP,
 			char buffer2[64];
 			int result = 0;
 			int instance_length = 0;
-
+			printf("TLV: %d values\n", resource->nof_values);
 			for (n=0; n<resource->nof_values; n++) {
 				if (resource->values[uriP->instanceId][n]) {
+					printf("value %d = %d\n",n,*((uint64_t*) resource->values[uriP->instanceId][n]));
 					result = lwm2m_intToTLV(TLV_RESSOURCE_INSTANCE, *((uint64_t*) resource->values[uriP->instanceId][n]), n,
 							buffer1 + instance_length, 64 - instance_length);
 					if (0 == result) {
@@ -260,7 +268,9 @@ static uint8_t prv_object_write(lwm2m_uri_t * uriP, char * buffer, int length,
 			if (maxvalue > resource->str_buff_sz) {
 				maxvalue = resource->str_buff_sz;
 			}
-			strncpy(resource->values[uriP->instanceId][0], buffer, maxvalue);
+			memcpy(resource->values[uriP->instanceId][0], buffer, maxvalue);
+			*((char*) resource->values[uriP->instanceId][0]+maxvalue) = '\0';
+
 			return COAP_204_CHANGED ;
 		} else {
 			fprintf(stderr, "\r\n Multiple string values not supported\r\n");
@@ -492,7 +502,7 @@ int objectSetIntValueInstanceMultiple(objectConfig_t* objectConfig, int resource
 				return -1;
 			} else {
 				if (idx > resource->nof_values) {
-					resource->nof_values = idx;
+					resource->nof_values = idx+1;
 				}
 				if (instanceId > objectConfig->nof_instances) {
 					objectConfig->nof_instances = instanceId;
