@@ -13,6 +13,20 @@ Summary of changes:
  * Uses GPIO interface to obtain values of solar panel and VBAT voltage from the Solar Panel shield v2.0. 
  VBAT pin and Solar panel should be connected to A0 and A1 pins respectively.
  
+OTA
+====
+
+To perform an OTA, need to WRITE to the applications object instance
+1) WRITE application name
+2) WRITE application URL
+3) EXEC application Download
+4) WRITE application args
+5) EXEC application Run
+
+Application status is obtained by reading application Status or Error code resources. 
+
+It requires tftp and start-stop-daemon commands. 
+
 
 Follow the instructions below for compiling and usage. 
 
