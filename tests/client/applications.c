@@ -20,6 +20,8 @@
 #include <sys/time.h>
 #include <pthread.h>
 #include <string.h>
+#include <sys/types.h>
+#include <signal.h>
 
 int exec_download(int instanceId);
 int exec_run(int instanceId);
@@ -71,6 +73,7 @@ objectConfig_t* newObjectApplications() {
 void *download_thread(void *arg) {
 	run_console_cmd_t *obj = (run_console_cmd_t*) arg;
 	int ret;
+	printf("Downloading cmd: %s\n", obj->cmd);
 	ret = system(obj->cmd);
 	obj->appObject->error = ret;
 	if (ret) {
@@ -172,75 +175,99 @@ int exec_download(int instanceId) {
 	return 0;
 }
 
+int exec_run_fork(char *cmd, char *args) {
+	char *argv[100];
+	char *pch;
+	int narg;
+
+	narg = 0;
+	argv[narg] = cmd;
+	narg++;
+	pch = args;
+	do {
+		printf("%d - %d (%s)\n", narg, pch-args, pch);
+		pch = strtok(narg==1?args:NULL, " ");
+		if (pch != NULL) {
+			*(pch-1) = '\0';	
+		}
+		argv[narg] = pch;
+		narg++;
+	} while(pch != NULL && narg < 100);
+	printf("Running command with %d args: \n", narg);
+	int i;
+	for (i=0;i<narg;i++) {
+		printf("%s ", argv[i]);
+	}
+	printf("\n");
+	int pid = vfork();
+	if (pid == -1) {
+		perror("fork");
+	} else if (pid == 0) {
+		execv(cmd, argv);
+		perror("exec");
+		exit(-1);
+	}
+	return pid;
+}
+
 int exec_run(int instanceId) {
 	char *cmd, *path;
 	int cmdLen, ret;
-	printf("Running %s\n", applicationsDB[instanceId].name);
-	path = get_current_dir_name();
-	cmdLen = 2*(strlen(path) + strlen(applicationsDB[instanceId].name)) + 512;
-	cmd = malloc(cmdLen);
-	if (cmd != NULL) {
-		snprintf(cmd, cmdLen, "start-stop-daemon --start --pidfile %s/%s.pid --startas %s/%s %s --background -m",
-				path, applicationsDB[instanceId].name, path, applicationsDB[instanceId].name,
-				applicationsDB[instanceId].args);
-		printf("running cmd: %s\n", cmd);
-		ret = system(cmd);
-		free(cmd);
-		free(path);
+	if (applicationsDB[instanceId].pid == 0) {
+		printf("Running %s\n", applicationsDB[instanceId].name);
+		path = get_current_dir_name();
+		cmdLen = (strlen(path) + strlen(applicationsDB[instanceId].name)) + 512;
+		cmd = malloc(cmdLen);
+		if (cmd != NULL) {
+			snprintf(cmd, cmdLen, "%s/%s", path, applicationsDB[instanceId].name);
+			ret = exec_run_fork(cmd, applicationsDB[instanceId].args);
+			free(cmd);
+			free(path);
 
-		if (ret == 0) {
-			applicationsDB[instanceId].state = RUNNING;
+			if (ret > 0) {
+				applicationsDB[instanceId].state = RUNNING;
+				applicationsDB[instanceId].pid = ret;
+				return 0;
+			} else {
+				applicationsDB[instanceId].state = ERROR;
+				applicationsDB[instanceId].error = ERROR_RUNNING;
+				return -1;
+			}
 		} else {
-			applicationsDB[instanceId].state = ERROR;
-			applicationsDB[instanceId].error = ERROR_RUNNING;
+			return -1;
 		}
-		printf("ret=%d\n", ret);
-		return ret;
 	} else {
+		printf("Application %s already running with pid %d\n", applicationsDB[instanceId].name, applicationsDB[instanceId].pid);
 		return -1;
 	}
 }
 
 int exec_kill(int instanceId) {
-	char *cmd, *path;
-	int cmdLen, ret;
-	printf("Killing %s\n", applicationsDB[instanceId].name);
-	path = get_current_dir_name();
-	cmdLen = (strlen(path) + strlen(applicationsDB[instanceId].name)) + 64;
-	cmd = malloc(cmdLen);
-	if (cmd != NULL) {
-		snprintf(cmd, cmdLen, "start-stop-daemon --stop --pidfile %s/%s.pid",
-				path, applicationsDB[instanceId].name);
-		applicationsDB[instanceId].state = IDLE;
-		ret = system(cmd);
-		free(cmd);
-		free(path);
-		return ret;
+	if (applicationsDB[instanceId].pid > 0) {
+		printf("Killing %s pid=%d\n", applicationsDB[instanceId].name, applicationsDB[instanceId].pid);
+		if (!kill(applicationsDB[instanceId].pid, SIGTERM)) {
+			applicationsDB[instanceId].pid = 0;
+			applicationsDB[instanceId].state = IDLE;
+			return 0;
+		} else {
+			return -1;
+		}
 	} else {
 		return -1;
 	}
-	return 0;
 }
 
 
 int exec_check(int instanceId) {
-	char *cmd, *path;
-	int cmdLen, ret;
-	printf("Checking %s\n", applicationsDB[instanceId].name);
-	path = get_current_dir_name();
-	cmdLen = (strlen(path) + strlen(applicationsDB[instanceId].name)) + 64;
-	cmd = malloc(cmdLen);
-	if (cmd != NULL) {
-		snprintf(cmd, cmdLen, "start-stop-daemon --status --pidfile %s/%s.pid",
-				path, applicationsDB[instanceId].name);
-		ret = system(cmd);
-		free(cmd);
-		free(path);
-		return ret;
+	if (applicationsDB[instanceId].pid > 0) {
+		if (!kill(applicationsDB[instanceId].pid, 0)) {
+			return 0;
+		} else {
+			return -1;
+		}
 	} else {
 		return -1;
 	}
-	return 0;
 }
 
 void applications_update() {

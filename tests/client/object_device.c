@@ -85,9 +85,13 @@ int exec_reset_error(int instanceId) {
 
 /** This function returns the free memory */
 long long free_memory() {
+#ifdef KK
 	unsigned long long ps = sysconf(_SC_PAGESIZE);
 	unsigned long long pn = sysconf(_SC_AVPHYS_PAGES);
 	return ps * pn;
+#else
+	return 0;
+#endif
 }
 
 #define GPIO_MAP_MAX 	2
@@ -129,6 +133,7 @@ int sysfs_read(char *file) {
 }
 
 int ad_init(int idx) {
+#ifdef ENABLE_AD
 	if (idx >=0 && idx < GPIO_MAP_MAX) {
 		char tmp[256];
 		sysfs_write(gpio_map[idx], "/sys/class/gpio/export");
@@ -140,12 +145,17 @@ int ad_init(int idx) {
 	} else {
 		return -1;
 	}
+#endif
 }
 
 uint64_t ad_read(int idx) {
+#ifdef ENABLE_AD
 	char tmp[256];
 	snprintf(tmp, 256, "/sys/bus/iio/devices/iio:device0/in_voltage%d_raw",idx);
 	return (uint64_t) sysfs_read(tmp);
+#else
+	return 0;
+#endif
 }
 
 static int first_time = 0;

@@ -25,10 +25,11 @@ typedef struct {
 	char URL[64];
 	uint64_t state;
 	uint64_t error;
+	int pid;
 }applications_t;
 
 
-#define NOF_APPLICATIONS	2
+#define NOF_APPLICATIONS	20
 
 objectConfig_t* newObjectApplications();
 void applications_update();
